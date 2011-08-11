@@ -1902,9 +1902,22 @@ def monitorPlayback(id, server, session=None):
 #Just a standard playback 
 def PLAY(vids):
         printDebug("== ENTER: PLAY ==", False)
+        
+        protocol=vids.split(':',1)[0]
+  
+        if protocol == "file":
+            printDebug( "We are playing a local file")
+            #Split out the path from the URL
+            playurl=url.split(':',1)[1]
+        elif protocol == "http":
+            printDebug( "We are playing a stream")
+            playurl=url+XBMCInternalHeaders
+        else:
+            playurl=url
+   
+       
         #This is for playing standard non-PMS library files (such as Plugins)
-        url = vids+XBMCInternalHeaders
-        item = xbmcgui.ListItem(path=url)
+        item = xbmcgui.ListItem(path=playurl)
         return xbmcplugin.setResolvedUrl(pluginhandle, True, item)
 
 def videoPluginPlay(vids, prefix=None):
@@ -2321,7 +2334,7 @@ def artist(url,tree=None):
            
             arguments['type']="Music"
 
-            mode=14 # grab season details
+            mode=14 
             url='http://'+server+'/library/metadata/'+arguments['ratingKey']+'/children'+"&mode="+str(mode)
             
             addDir(url,properties,arguments) 
@@ -2486,9 +2499,6 @@ def tracks(url,tree=None):
             
             #required to grab to check if file is a .strm file
             #Can't play strm files, so lets not bother listing them. 
-            if partarguments['file'].find('.strm')>0:
-                print "Found unsupported .strm file.  Will not list"
-                continue
            
             printDebug( "args is " + str(arguments))
             printDebug( "Media is " + str(mediaarguments))
