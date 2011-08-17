@@ -1842,14 +1842,12 @@ def monitorPlayback(id, server, session=None):
     while xbmc.Player().isPlaying():
         #Get the current playback time
         currentTime = int(xbmc.Player().getTime())
-        
-        #Try to get the progress, if not revert to previous progress (which should be near enough)
-        try:
+
+        if g_proxy == "true":
             progress = 50
-            if not g_proxy == "true":
-                progress = int(remove_html_tags(xbmc.executehttpapi("GetPercentage")))             
-        except: pass
-               
+        else:        
+            progress = int(remove_html_tags(xbmc.executehttpapi("GetPercentage")))             
+         
         #Now sleep for 5 seconds
         time.sleep(5)
         if g_debug == "true":
@@ -1857,7 +1855,7 @@ def monitorPlayback(id, server, session=None):
             if monitorCount == 5:
                 printDebug ("Still monitoring")
                 monitorCount=0
-          
+                          
     #If we get this far, playback has stopped
     printDebug("Playback Stopped")
     
@@ -3459,9 +3457,9 @@ def getTranscodeSettings(override=False):
         capability="X-Plex-Client-Capabilities="+urllib.quote_plus("protocols="+baseCapability+";videoDecoders=h264{profile:high&resolution:1080&level:51};audioDecoders="+audio)              
         printDebug("Plex Client Capability = " + capability)
     
-        global g_proxy
-        g_proxy = __settings__.getSetting('proxy')
-        printDebug( "proxy is " + g_proxy)
+    global g_proxy
+    g_proxy = __settings__.getSetting('proxy')
+    printDebug( "proxy is " + g_proxy)
 
 def deleteMedia(url):
     printDebug("== ENTER: deleteMedia ==", False)
