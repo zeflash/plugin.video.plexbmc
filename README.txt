@@ -1,5 +1,7 @@
 PleXBMC - Use XBMC to play media from Plex Media Server
 
+DHARMA VERSION ONLY
+
 This is an XBMC addon that allows media and metadata stored in the Plex Media 
 Server (PMS) to be viewed and played using XBMC.
 
