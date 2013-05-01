@@ -4385,6 +4385,17 @@ elif str(sys.argv[1]) == "cacherefresh":
         xbmc.executebuiltin("XBMC.ActivateWindow(Home)")
     else:
         xbmc.executebuiltin("Container.Refresh")
+        
+elif str(sys.argv[1]) == "search":
+    keyboard = xbmc.Keyboard( '', 'heading' )
+    keyboard.doModal()
+    if ( keyboard.isConfirmed() ):
+        searchstring = keyboard.getText()
+        if searchstring:
+            import gui
+            ui = gui.GUI( "script-globalsearch-main.xml", __cwd__, "Default", searchstring=searchstring )
+            ui.doModal()
+            del ui        
 
 #else move to the main code    
 else:
