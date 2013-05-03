@@ -3782,10 +3782,65 @@ def shelf( server_list=None ):
             m_url="plugin://plugin.video.plexbmc?url=%s&mode=%s&t=%s%s" % ( getLinkURL('http://'+server_address,media,server_address), _MODE_PLAYSHELF, randomNumber, aToken)
             m_thumb=getThumb(media,server_address)
 
+            #Set PLEXBMC specific items
+            
             WINDOW.setProperty("Plexbmc.LatestMovie.%s.Path" % movieCount, m_url)
             WINDOW.setProperty("Plexbmc.LatestMovie.%s.Title" % movieCount, media.get('title','Unknown').encode('UTF-8'))
             WINDOW.setProperty("Plexbmc.LatestMovie.%s.Thumb" % movieCount, m_thumb+qToken)
+     
+            #Set skin widget items
+            m_fanart=getFanart(media,server_address)
+            percent="0%"
+            duration=media.get('duration','0')
+            
+            if media.get('viewCount','0') == '0':
+                watched="false"
+            else:
+                watched="true"
+                
+            if media.get('viewOffset','0') == '0':
+                resume="false"
+            else:
+            
+                left=media.get('viewOffset')
+            
+                if duration != '0':
+                    percent="%s%%" %  int(float(left) / float(duration) * 100)
+ 
+                resume="true"
+            
+            request="RecentMovie"         
+            WINDOW.setProperty("%s.%d.Title"           % (request, movieCount), media.get('title','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Path"            % (request, movieCount), m_url)
+            WINDOW.setProperty("%s.%d.Thumb"           % (request, movieCount), m_thumb+qToken)
+            WINDOW.setProperty("%s.%d.DBID"            % (request, movieCount), "N/A")
+            WINDOW.setProperty("%s.%d.OriginalTitle"   % (request, movieCount), media.get('title','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Year"            % (request, movieCount), media.get('year','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Genre"           % (request, movieCount), "")
+            WINDOW.setProperty("%s.%d.Studio"          % (request, movieCount), media.get('studio','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Country"         % (request, movieCount), "UK")
+            WINDOW.setProperty("%s.%d.Plot"            % (request, movieCount), media.get('summary','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.PlotOutline"     % (request, movieCount), "")
+            WINDOW.setProperty("%s.%d.Tagline"         % (request, movieCount), media.get('tagline','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Runtime"         % (request, movieCount), str(int(float(duration)/1000/60)))
+            WINDOW.setProperty("%s.%d.Rating"          % (request, movieCount), "")
+            WINDOW.setProperty("%s.%d.mpaa"            % (request, movieCount), media.get('contentRating','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Director"        % (request, movieCount), "")
+            WINDOW.setProperty("%s.%d.Trailer"         % (request, movieCount), "")
+            WINDOW.setProperty("%s.%d.Art(poster)"     % (request, movieCount), m_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(fanart)"     % (request, movieCount), m_fanart+qToken)
+            WINDOW.setProperty("%s.%d.Art(clearlogo)"  % (request, movieCount), m_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(clearart)"   % (request, movieCount),m_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(landscape)"  % (request, movieCount), m_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(banner)"     % (request, movieCount), m_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(discart)"    % (request, movieCount), m_thumb+qToken)              
+            WINDOW.setProperty("%s.%d.Resume"          % (request, movieCount), resume)
+            WINDOW.setProperty("%s.%d.PercentPlayed"   % (request, movieCount), percent)
+            WINDOW.setProperty("%s.%d.Watched"         % (request, movieCount), watched)
+            WINDOW.setProperty("%s.%d.File"            % (request, movieCount), m_url)
+            WINDOW.setProperty("%s.%d.Play"            % (request, movieCount), m_url)
 
+            
             movieCount += 1
 
             printDebug("Building Recent window title: %s" % media.get('title','Unknown').encode('UTF-8'))
