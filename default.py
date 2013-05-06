@@ -2458,7 +2458,7 @@ def getContent( url ):
 def processDirectory( url, tree=None ):
     printDebug("== ENTER: processDirectory ==", False)
     printDebug("Processing secondary menus")
-    xbmcplugin.setContent(pluginhandle, 'movies')
+    xbmcplugin.setContent(pluginhandle, 'files')
 
     server=getServerFromURL(url)
     setWindowHeading(tree)
@@ -3512,7 +3512,7 @@ def skin( server_list=None, type=None ):
         WINDOW.setProperty("plexbmc.%d.title"    % (sectionCount) , "Shared...")
         WINDOW.setProperty("plexbmc.%d.subtitle" % (sectionCount) , "Shared")
         WINDOW.setProperty("plexbmc.%d.path"     % (sectionCount) , "ActivateWindow(VideoLibrary,plugin://plugin.video.plexbmc/?url=/&mode="+str(_MODE_SHARED_ALL)+",return)")
-        WINDOW.setProperty("plexbmc.%d.type"     % (sectionCount) , "movie")
+        WINDOW.setProperty("plexbmc.%d.type"     % (sectionCount) , "shared")
         WINDOW.setProperty("plexbmc.%d.shared"     % (sectionCount) , "true")
         sectionCount += 1
     
