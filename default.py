@@ -524,6 +524,7 @@ def getServerSections ( ip_address, port, name, uuid):
                     'address'    : ip_address+":"+port ,
                     'serverName' : name ,
                     'uuid'       : uuid ,
+                    'sectionuuid' : sections.get('uuid','') ,
                     'path'       : path ,
                     'token'      : sections.get('accessToken',None) ,
                     'location'   : "local" ,
@@ -558,6 +559,7 @@ def getMyplexSections ( ):
                     'address'    : sections.get('host','Unknown')+":"+sections.get('port'),
                     'serverName' : sections.get('serverName','Unknown').encode('utf-8'),
                     'uuid'       : sections.get('machineIdentifier','Unknown') ,
+                    'sectionuuid' : '', 
                     'path'       : sections.get('path') ,
                     'token'      : sections.get('accessToken',None) ,
                     'location'   : "myplex" ,
@@ -3857,12 +3859,51 @@ def shelf( server_list=None ):
 
             s_url="ActivateWindow(VideoLibrary, plugin://plugin.video.plexbmc?url=%s&mode=%s%s, return)" % ( getLinkURL('http://'+server_address,media,server_address), _MODE_TVEPISODES, aToken)
             s_thumb=getThumb(media,server_address)
+            s_fanart=getFanart(media,server_address)
+
 
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.Path" % seasonCount, s_url )
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.EpisodeTitle" % seasonCount, '')
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.EpisodeSeason" % seasonCount, media.get('title','').encode('UTF-8'))
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.ShowTitle" % seasonCount, media.get('parentTitle','Unknown').encode('UTF-8'))
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.Thumb" % seasonCount, s_thumb+qToken)
+            
+            
+            #skin widgets
+            request="RecentEpisode"         
+            WINDOW.setProperty("%s.%d.DBID"                % (request, seasonCount), "")
+            WINDOW.setProperty("%s.%d.Title"               % (request, seasonCount), media.get('title','').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Episode"             % (request, seasonCount), 'episode')
+            WINDOW.setProperty("%s.%d.EpisodeNo"           % (request, seasonCount), ' ')
+            WINDOW.setProperty("%s.%d.Season"              % (request, seasonCount), media.get('title','').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Plot"                % (request, seasonCount), media.get('summary','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.TVshowTitle"         % (request, seasonCount), media.get('parentTitle','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.Rating"              % (request, seasonCount), media.get('rating','Unknown').encode('UTF-8'))
+            #WINDOW.setProperty("%s.%d.Runtime"             % (request, seasonCount), str(int((item2['runtime'] / 60) + 0.5)))
+            #WINDOW.setProperty("%s.%d.Premiered"           % (request, seasonCount), item2['firstaired'])
+            WINDOW.setProperty("%s.%d.Art(thumb)"          % (request, seasonCount), s_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(tvshow.fanart)"  % (request, seasonCount), s_fanart+qToken)
+            WINDOW.setProperty("%s.%d.Art(tvshow.poster)"  % (request, seasonCount), s_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(tvshow.banner)"  % (request, seasonCount), s_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(tvshow.clearlogo)"% (request, seasonCount), s_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(tvshow.clearart)" % (request, seasonCount), s_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(tvshow.landscape)"% (request, seasonCount), s_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Art(tvshow.characterart)"% (request, seasonCount), s_thumb+qToken)
+            WINDOW.setProperty("%s.%d.Studio"              % (request, seasonCount), media.get('studio','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("%s.%d.mpaa"                % (request, seasonCount), media.get('contentRating','Unknown').encode('UTF-8'))
+            #WINDOW.setProperty("%s.%d.Resume"              % (request, seasonCount), resume)
+            #WINDOW.setProperty("%s.%d.PercentPlayed"       % (request, seasonCount), played)
+            #WINDOW.setProperty("%s.%d.Watched"             % (request, seasonCount), watched)
+            WINDOW.setProperty("%s.%d.File"                % (request, seasonCount), s_url)
+            WINDOW.setProperty("%s.%d.Path"                % (request, seasonCount), s_url)
+            WINDOW.setProperty("%s.%d.Play"                % (request, seasonCount), s_url)
+            #WINDOW.setProperty("%s.%d.VideoCodec"          % (request, seasonCount), streaminfo['videocodec'])
+            #WINDOW.setProperty("%s.%d.VideoResolution"     % (request, seasonCount), streaminfo['videoresolution'])
+            #WINDOW.setProperty("%s.%d.VideoAspect"         % (request, seasonCount), streaminfo['videoaspect'])
+            #WINDOW.setProperty("%s.%d.AudioCodec"          % (request, seasonCount), streaminfo['audiocodec'])
+            #WINDOW.setProperty("%s.%d.AudioChannels"       % (request, seasonCount), str(streaminfo['audiochannels']))
+
+            
             seasonCount += 1
 
             printDebug("Building Recent window title: %s" % media.get('parentTitle','Unknown').encode('UTF-8'))
