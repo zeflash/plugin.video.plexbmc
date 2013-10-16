@@ -3724,12 +3724,11 @@ def shelf( server_list=None ):
         clearShelf(0,0,0)
         return
         
-    if __settings__.getSetting('homeshelf') == '0':
-        endpoint="/library/recentlyAdded"
-    else:
+    if __settings__.getSetting('homeshelf') == '1':
         direction=False
         endpoint="/library/onDeck"
-
+    else:
+        endpoint="/library/recentlyAdded"
         
     randomNumber=str(random.randint(1000000000,9999999999))
         
@@ -3854,7 +3853,9 @@ def shelf( server_list=None ):
 
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.Path" % seasonCount, s_url )
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.EpisodeTitle" % seasonCount, media.get('title','').encode('utf-8'))
+            WINDOW.setProperty("Plexbmc.LatestEpisode.%s.EpisodeNumber" % seasonCount, media.get('index','').encode('utf-8'))
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.EpisodeSeason" % seasonCount, media.get('grandparentTitle','Unknown').encode('UTF-8'))
+            WINDOW.setProperty("Plexbmc.LatestEpisode.%s.EpisodeSeasonNumber" % seasonCount, media.get('parentIndex','').encode('UTF-8'))
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.ShowTitle" % seasonCount, media.get('title','Unknown').encode('UTF-8'))
             WINDOW.setProperty("Plexbmc.LatestEpisode.%s.Thumb" % seasonCount, s_thumb+qToken)
             seasonCount += 1
@@ -3864,6 +3865,174 @@ def shelf( server_list=None ):
             printDebug("Building Recent window thumb: %s" % s_thumb)
             
     clearShelf( movieCount, seasonCount, musicCount)
+
+def shelfOnDeck( server_list=None ):
+    #Gather some data and set the window properties
+    printDebug("== ENTER: shelfOnDeck() ==", False)
+    
+    if __settings__.getSetting('movieShelf') == "false" and __settings__.getSetting('tvShelf') == "false" and __settings__.getSetting('musicShelf') == "false":
+        printDebug("Disabling all shelf items")
+        clearOnDeckShelf()
+        return
+
+    #Get the global host variable set in settings
+    WINDOW = xbmcgui.Window( 10000 )
+
+    movieCount=1
+    seasonCount=1
+    musicCount=1
+    added_list={}    
+    direction=True
+    full_count=0
+    
+    if server_list is None:
+        server_list=discoverAllServers()
+
+    if server_list == {}:
+        xbmc.executebuiltin("XBMC.Notification(Unable to see any media servers,)")
+        clearOnDeckShelf(0,0,0)
+        return
+        
+    if __settings__.getSetting('homeshelf') == '2':
+        direction=False
+        endpoint="/library/onDeck"
+
+        
+        randomNumber=str(random.randint(1000000000,9999999999))
+    
+        for server_details in server_list.values():
+
+            if server_details['class'] == "secondary":
+                continue
+        
+            if not server_details['owned'] == '1':
+                continue
+        
+            global _PARAM_TOKEN
+            _PARAM_TOKEN = server_details.get('token','')
+            aToken=getAuthDetails({'token': _PARAM_TOKEN} )
+            qToken=getAuthDetails({'token': _PARAM_TOKEN}, prefix='?')
+            
+            tree=getXML('http://'+server_details['server']+":"+server_details['port']+endpoint)
+            if tree is None:
+                xbmc.executebuiltin("XBMC.Notification(Unable to contact server: "+server_details['serverName']+",)")
+                clearOnDeckShelf()
+                return
+
+            for eachitem in tree:
+
+                if direction:
+                    added_list[int(eachitem.get('addedAt',0))] = (eachitem, server_details['server']+":"+server_details['port'], aToken, qToken )
+                else:
+                    added_list[full_count] = (eachitem, server_details['server']+":"+server_details['port'], aToken, qToken )
+                    full_count += 1
+                    
+        library_filter = __settings__.getSetting('libraryfilter')
+        acceptable_level = __settings__.getSetting('contentFilter')
+        
+        #For each of the servers we have identified
+        for index in sorted(added_list, reverse=direction):
+            
+            media=added_list[index][0]
+            server_address=added_list[index][1]
+            aToken=added_list[index][2]
+            qToken=added_list[index][3]
+            
+            if media.get('type',None) == "movie":
+
+                printDebug("Found a recent movie entry: [%s]" % ( media.get('title','Unknown').encode('UTF-8') , ))
+
+                if __settings__.getSetting('movieShelf') == "false":
+                    WINDOW.clearProperty("Plexbmc.OnDeckMovie.1.Path" )
+                    continue
+
+                if not displayContent( acceptable_level , media.get('contentRating') ):
+                    continue
+
+                if media.get('librarySectionID') == library_filter:
+                    printDebug("SKIPPING: Library Filter match: %s = %s " % (library_filter, media.get('librarySectionID')))
+                    continue
+
+                m_url="plugin://plugin.video.plexbmc?url=%s&mode=%s&t=%s%s" % ( getLinkURL('http://'+server_address,media,server_address), _MODE_PLAYSHELF, randomNumber, aToken)
+                m_thumb=getThumb(media,server_address)
+
+                WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Path" % movieCount, m_url)
+                WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Title" % movieCount, media.get('title','Unknown').encode('UTF-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Thumb" % movieCount, m_thumb+qToken)
+
+                movieCount += 1
+
+                printDebug("Building On Deck Recent window title: %s" % media.get('title','Unknown').encode('UTF-8'))
+                printDebug("Building On Deck Recent window url: %s" % m_url)
+                printDebug("Building On Deck Recent window thumb: %s" % m_thumb)
+
+            elif media.get('type',None) == "season":
+
+                printDebug("Found a recent On Deck season entry [%s]" % ( media.get('parentTitle','Unknown').encode('UTF-8') , ))
+
+                if __settings__.getSetting('tvShelf') == "false":
+                    WINDOW.clearProperty("Plexbmc.OnDeckEpisode.1.Path" )
+                    continue
+
+                s_url="ActivateWindow(VideoLibrary, plugin://plugin.video.plexbmc?url=%s&mode=%s%s, return)" % ( getLinkURL('http://'+server_address,media,server_address), _MODE_TVEPISODES, aToken)
+                s_thumb=getThumb(media,server_address)
+
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.Path" % seasonCount, s_url )
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.EpisodeTitle" % seasonCount, '')
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.EpisodeSeason" % seasonCount, media.get('title','').encode('UTF-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.ShowTitle" % seasonCount, media.get('parentTitle','Unknown').encode('UTF-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.Thumb" % seasonCount, s_thumb+qToken)
+                seasonCount += 1
+
+                printDebug("Building On Deck Recent window title: %s" % media.get('parentTitle','Unknown').encode('UTF-8'))
+                printDebug("Building On Deck Recent window url: %s" % s_url)
+                printDebug("Building On Deck Recent window thumb: %s" % s_thumb)
+
+            elif media.get('type') == "album":
+
+                if __settings__.getSetting('musicShelf') == "false":
+                    WINDOW.clearProperty("Plexbmc.OnDeckAlbum.1.Path" )
+                    continue
+                printDebug("Found a recent On Deck album entry")
+
+                s_url="ActivateWindow(MusicFiles, plugin://plugin.video.plexbmc?url=%s&mode=%s%s, return)" % ( getLinkURL('http://'+server_address,media,server_address), _MODE_TRACKS, aToken)
+                s_thumb=getThumb(media,server_address)
+
+                WINDOW.setProperty("Plexbmc.OnDeckAlbum.%s.Path" % musicCount, s_url )
+                WINDOW.setProperty("Plexbmc.OnDeckAlbum.%s.Title" % musicCount, media.get('title','Unknown').encode('UTF-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckAlbum.%s.Artist" % musicCount, media.get('parentTitle','Unknown').encode('UTF-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckAlbum.%s.Thumb" % musicCount, s_thumb+qToken)
+                musicCount += 1
+
+                printDebug("Building Recent On Deck window title: %s" % media.get('parentTitle','Unknown').encode('UTF-8'))
+                printDebug("Building Recent On Deck window url: %s" % s_url)
+                printDebug("Building Recent On Deck window thumb: %s" % s_thumb)
+
+            elif media.get('type',None) == "episode":
+
+                printDebug("Found an onDeck episode entry [%s]" % ( media.get('title','Unknown').encode('UTF-8') , ))
+
+                if __settings__.getSetting('tvShelf') == "false":
+                    WINDOW.clearProperty("Plexbmc.OnDeckEpisode.1.Path" )
+                    continue
+
+                s_url="PlayMedia(plugin://plugin.video.plexbmc?url=%s&mode=%s&t=%s%s)" % ( getLinkURL('http://'+server_address,media,server_address), _MODE_PLAYSHELF, randomNumber, aToken)
+                s_thumb="http://"+server_address+media.get('grandparentThumb','')
+
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.Path" % seasonCount, s_url )
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.EpisodeTitle" % seasonCount, media.get('title','').encode('utf-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.EpisodeNumber" % seasonCount, media.get('index','').encode('utf-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.EpisodeSeason" % seasonCount, media.get('grandparentTitle','Unknown').encode('UTF-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.EpisodeSeasonNumber" % seasonCount, media.get('parentIndex','').encode('UTF-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.ShowTitle" % seasonCount, media.get('title','Unknown').encode('UTF-8'))
+                WINDOW.setProperty("Plexbmc.OnDeckEpisode.%s.Thumb" % seasonCount, s_thumb+qToken)
+                seasonCount += 1
+
+                printDebug("Building Recent On Deck window title: %s" % media.get('title','Unknown').encode('UTF-8'))
+                printDebug("Building Recent On Deck window url: %s" % s_url)
+                printDebug("Building Recent On Deck window thumb: %s" % s_thumb)
+	            
+        clearOnDeckShelf( movieCount, seasonCount, musicCount)
 
 def clearShelf (movieCount=0, seasonCount=0, musicCount=0):
     #Clear out old data
@@ -3895,6 +4064,40 @@ def clearShelf (movieCount=0, seasonCount=0, musicCount=0):
             WINDOW.clearProperty("Plexbmc.LatestAlbum.%s.Artist" % ( i ) )
             WINDOW.clearProperty("Plexbmc.LatestAlbum.%s.Thumb"  % ( i ) )
         printDebug("Done clearing music")
+    except: pass
+
+
+    return
+def clearOnDeckShelf (movieCount=0, seasonCount=0, musicCount=0):
+    #Clear out old data
+    WINDOW = xbmcgui.Window( 10000 )
+    printDebug("Clearing unused On Deck properties")
+
+    try:
+        for i in range(movieCount, 50+1):
+            WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Path"   % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Title"  % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Thumb"  % ( i ) )
+        printDebug("Done clearing On Deck movies")
+    except: pass
+
+    try:
+        for i in range(seasonCount, 50+1):
+            WINDOW.clearProperty("Plexbmc.OnDeckEpisode.%s.Path"           % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckEpisode.%s.EpisodeTitle"   % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckEpisode.%s.EpisodeSeason"  % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckEpisode.%s.ShowTitle"      % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckEpisode.%s.Thumb"          % ( i ) )
+        printDebug("Done clearing On Deck tv")
+    except: pass
+
+    try:
+        for i in range(musicCount, 50+1):
+            WINDOW.clearProperty("Plexbmc.OnDeckAlbum.%s.Path"   % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckAlbum.%s.Title"  % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckAlbum.%s.Artist" % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckAlbum.%s.Thumb"  % ( i ) )
+        printDebug("Done clearing On Deck music")
     except: pass
 
 
@@ -4347,6 +4550,7 @@ if str(sys.argv[1]) == "skin":
 #Populate recently/on deck shelf items 
 elif str(sys.argv[1]) == "shelf":
     shelf()
+    shelfOnDeck()
     
 #Populate channel recently viewed items    
 elif str(sys.argv[1]) == "channelShelf":
